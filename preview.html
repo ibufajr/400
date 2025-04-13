@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>معاينة تصميم اللعبة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Tajawal', sans-serif;
+      background: linear-gradient(135deg, #120045, #3b0060);
+      color: #fff;
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      text-align: center;
+      color: #ffeb3b;
+      margin-bottom: 30px;
+    }
+
+    .preview-section {
+      background: rgba(0,0,0,0.3);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    h2 {
+      color: #81D4FA;
+      margin-bottom: 15px;
+    }
+
+    .color-palette {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .color-box {
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+      color: white;
+      font-weight: bold;
+    }
+
+    .component-preview {
+      margin-bottom: 20px;
+    }
+
+    .button {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      color: white;
+      font-family: 'Tajawal', sans-serif;
+      font-size: 16px;
+      margin-bottom: 10px;
+      cursor: pointer;
+    }
+
+    .primary-button {
+      background: linear-gradient(135deg, #4CAF50, #388E3C);
+    }
+
+    .danger-button {
+      background: linear-gradient(135deg, #f44336, #d32f2f);
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(0,0,0,0.2);
+      border: 1px solid rgba(255,255,255,0.1);
+      color: #ffeb3b;
+      font-family: 'Tajawal', sans-serif;
+      margin-bottom: 10px;
+    }
+
+    .player-card {
+      background: rgba(0,0,0,0.25);
+      border-radius: 8px;
+      padding: 15px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .player-icon {
+      font-size: 24px;
+    }
+
+    .player-info {
+      flex: 1;
+    }
+
+    .player-name {
+      color: #ffeb3b;
+      margin-bottom: 5px;
+    }
+
+    .player-score {
+      color: #2196f3;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>معاينة تصميم اللعبة</h1>
+
+    <div class="preview-section">
+      <h2>🎨 لوحة الألوان</h2>
+      <div class="color-palette">
+        <div class="color-box" style="background: #120045">
+          خلفية داكنة<br>#120045
+        </div>
+        <div class="color-box" style="background: #3b0060">
+          خلفية فاتحة<br>#3b0060
+        </div>
+        <div class="color-box" style="background: #ffeb3b">
+          لون النص الرئيسي<br>#ffeb3b
+        </div>
+        <div class="color-box" style="background: #2196f3">
+          لون التفاصيل<br>#2196f3
+        </div>
+      </div>
+    </div>
+
+    <div class="preview-section">
+      <h2>🎮 عناصر اللعبة</h2>
+      
+      <div class="component-preview">
+        <button class="button primary-button">🚀 ابدأ اللعبة</button>
+        <button class="button danger-button">🏁 إنهاء اللعبة</button>
+      </div>
+
+      <div class="component-preview">
+        <input type="text" class="input-field" placeholder="اسم اللاعب" value="لاعب 1">
+      </div>
+
+      <div class="component-preview">
+        <div class="player-card">
+          <span class="player-icon">👨‍🚀</span>
+          <div class="player-info">
+            <div class="player-name">لاعب 1</div>
+            <div class="player-score">10 نقطة</div>
+          </div>
+        </div>
+        
+        <div class="player-card" style="background: rgba(76,175,80,0.3);">
+          <span class="player-icon">👩‍🎨</span>
+          <div class="player-info">
+            <div class="player-name">لاعب 2</div>
+            <div class="player-score">15 نقطة</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#120045">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>تحدي الذكاء - اللعبة</title>
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="game-styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+</head>
+<body>
+  <div class="game-container">
+    <h1>🎯 تحدي الذكاء</h1>
+    
+    <div class="header">
+      <div class="timer">⏱️ <span id="timeLeft">30</span></div>
+      <div class="player-info">🎮 دور: <span id="currentPlayer">لاعب 1</span></div>
+      <div class="difficulty-info">🎯 المستوى: <span id="difficulty">سهل</span></div>
+    </div>
+    
+    <div class="question-container">
+      <div class="category-header">
+        <div class="category" id="questionCategory">
+          <span class="category-text">🌍 عام</span>
+        </div>
+        <button class="settings-button" id="settingsButton">
+          <i class="fas fa-cog"></i>
+        </button>
+      </div>
+      <div class="question" id="questionText">جاري تحميل السؤال...</div>
+      <div class="options" id="optionsContainer">
+        <!-- Options will be added dynamically -->
+      </div>
+      <div class="game-controls">
+        <button id="endGameBtn" class="end-game-button">🏁 إنهاء اللعبة</button>
+      </div>
+    </div>
+
+    <div class="players-list" id="playersList">
+      <!-- Players will be added dynamically -->
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="settings-modal" id="settingsModal">
+    <div class="settings-content">
+      <div class="settings-header">
+        <h2>⚙️ الإعدادات</h2>
+        <button class="close-settings" id="closeSettings">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="settings-section">
+        <h3>🔊 الصوت</h3>
+        <div class="settings-option">
+          <label>موسيقى الخلفية</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="bgmToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-option">
+          <label>مستوى موسيقى الخلفية</label>
+          <input type="range" id="bgmVolume" class="volume-slider" min="0" max="100" value="30">
+        </div>
+        <div class="settings-option">
+          <label>المؤثرات الصوتية</label>
+          <label class="toggle-switch">
+            <input type="checkbox" id="sfxToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="settings-option">
+          <label>مستوى المؤثرات الصوتية</label>
+          <input type="range" id="sfxVolume" class="volume-slider" min="0" max="100" value="70">
+        </div>
+      </div>
+
+      <div class="settings-actions">
+        <button class="settings-ok-button" id="settingsOk">موافق</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+  <script src="game-config.js"></script>
+  <script src="game-sounds.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>

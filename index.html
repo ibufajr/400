@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>تحدي الذكاء - لعبة المعرفة</title>
+  <link rel="icon" type="image/x-icon" href="https://www.favicon.cc/favicon/16/16/favicon.ico">
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Almarai:wght@400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
+</head>
+<body>
+  <div class="container">
+    <div class="corner corner-top-left"></div>
+    <div class="corner corner-top-right"></div>
+    <div class="corner corner-bottom-left"></div>
+    <div class="corner corner-bottom-right"></div>
+    <h1>💭 تحدي الذكاء</h1>
+    <div class="subtitle">🎯 اختبر معلوماتك وتحدى أصدقاءك</div>
+
+    <div class="card">
+      <label for="playerCount">👥 عدد اللاعبين:</label>
+      <select id="playerCount">
+        <option value="">اختر عدد اللاعبين</option>
+        <script>
+          for(let i=1; i<=8; i++) {
+            document.write(`<option value="${i}">${'👥'.repeat(Math.ceil(i/2))} ${i} ${i === 1 ? 'لاعب' : 'لاعبين'}</option>`);
+          }
+        </script>
+      </select>
+      <div id="playerNamesContainer" class="player-selection"></div>
+    </div>
+
+    <div class="card">
+      <div class="settings-section">
+        <div class="settings-row">
+          <div class="settings-item">
+            <label for="categorySelect">📂 نوع الأسئلة:</label>
+            <select id="categorySelect">
+              <option value="">اختر النوع</option>
+              <option value="random">🎲 عشوائي</option>
+              <option value="Islamic">🕌 إسلامي</option>
+              <option value="أدب">📖 أدب</option>
+              <option value="رياضة">⚽ رياضة</option>
+              <option value="تاريخ">📜 تاريخ</option>
+              <option value="جغرافيا">🗺️ جغرافيا</option>
+              <option value="علوم">🔬 علوم</option>
+              <option value="تقني">💻 تقني</option>
+              <option value="سينما">🎬 سينما</option>
+              <option value="فنانين">🎨 فنانين</option>
+              <option value="سياسي">👔 سياسي</option>
+              <option value="دول">🌍 دول</option>
+              <option value="عام">📚 عام</option>
+            </select>
+          </div>
+          <div class="settings-item" data-difficulty="easy">
+            <label for="difficulty">🎯 مستوى الصعوبة:</label>
+            <select id="difficulty">
+              <option value="">اختر المستوى</option>
+              <option value="easy"><span style="color: #4CAF50">★</span> سهل (2 أجوبة)</option>
+              <option value="medium"><span style="color: #FF9800">★★</span> متوسط (3 أجوبة)</option>
+              <option value="hard"><span style="color: #F44336">★★★</span> صعب (4 أجوبة)</option>
+            </select>
+          </div>
+        </div>
+        <div class="settings-row">
+          <div class="settings-item">
+            <label for="timeSelect">⏱️ الوقت:</label>
+            <select id="timeSelect">
+              <option value="">اختر الوقت</option>
+              <option value="20">⏱️ 20 ثانية</option>
+              <option value="30">⏱️ 30 ثانية</option>
+              <option value="40">⏱️ 40 ثانية</option>
+              <option value="50">⏱️ 50 ثانية</option>
+              <option value="60">⏱️ 60 ثانية</option>
+              <option value="custom">⚙️ وقت مخصص</option>
+            </select>
+            <div id="customTimeContainer" style="display: none; margin-top: 10px;">
+              <input type="number" id="customTime" min="5" max="300" value="30" placeholder="أدخل الوقت بالثواني" class="custom-time-input">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-button">
+      🚀 ابدأ التحدي الآن
+    </button>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.all.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
+  <script src="game-config.js"></script>
+  <script src="game-sounds.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
