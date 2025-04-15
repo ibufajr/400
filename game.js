@@ -16,21 +16,123 @@ let gameState = {
   isAnswered: false
 };
 
+// Event listeners storage
+const eventListeners = {
+  click: null,
+  keydown: null,
+  touchstart: null
+};
+
+// Check browser compatibility
+function checkCompatibility() {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const supportsWebAudio = !!window.AudioContext || !!window.webkitAudioContext;
+  
+  if (!supportsWebAudio) {
+    console.warn('Web Audio API not supported, falling back to HTML5 Audio');
+    Howler.usingWebAudio = false;
+  }
+  
+  if (isMobile) {
+    gameState.timePerQuestion = 45; // زيادة الوقت للأجهزة المحمولة
+  }
+}
+
+// Cleanup resources
+function cleanupResources() {
+  // Clear timers
+  if (gameState.timer) {
+    clearInterval(gameState.timer);
+    gameState.timer = null;
+  }
+  
+  // Stop all sounds
+  if (window.gameSounds) {
+    window.gameSounds.stopAllSounds();
+  }
+  
+  // Remove event listeners
+  Object.entries(eventListeners).forEach(([event, handler]) => {
+    if (handler) {
+      document.removeEventListener(event, handler);
+      eventListeners[event] = null;
+    }
+  });
+  
+  // لا نقوم بمسح الخيارات هنا
+}
+
+// Reset game state
+function resetGameState() {
+  cleanupResources();
+  
+  gameState = {
+    players: [],
+    questions: [],
+    currentQuestionIndex: 0,
+    currentPlayerIndex: 0,
+    scores: {},
+    timePerQuestion: 30,
+    category: '',
+    difficulty: 'easy',
+    answersCount: 3,
+    timer: null,
+    isAnswered: false
+  };
+  
+  localStorage.removeItem('gameState');
+}
+
+// Error handling
+function handleError(error, context) {
+  console.error(`Error in ${context}:`, error);
+  cleanupResources();
+  showError(`❌ حدث خطأ في ${context}`);
+  
+  // Try to recover
+  try {
+    resetGameState();
+    initializeGame();
+  } catch (recoveryError) {
+    console.error('Recovery failed:', recoveryError);
+    showError('❌ فشل استعادة اللعبة، يرجى تحديث الصفحة');
+  }
+}
+
 // Initialize game when document is ready
 document.addEventListener('DOMContentLoaded', () => {
   try {
+    checkCompatibility();
+    
     const savedState = localStorage.getItem('gameState');
     if (savedState) {
-      const parsedState = JSON.parse(savedState);
-      gameState = {
-        ...parsedState,
-        timer: null,
-        isAnswered: false
-      };
+      try {
+        const parsedState = JSON.parse(savedState);
+        if (parsedState && parsedState.questions && Array.isArray(parsedState.questions)) {
+          gameState = {
+            ...parsedState,
+            timer: null,
+            isAnswered: false
+          };
+          console.log('Loaded game state:', gameState); // للتأكد من تحميل البيانات
+          initializeGame();
+        } else {
+          console.error('Invalid saved state format:', parsedState);
+          resetGameState();
+          initializeGame();
+        }
+      } catch (parseError) {
+        console.error('Error parsing saved state:', parseError);
+        resetGameState();
+        initializeGame();
+      }
+    } else {
+      console.log('No saved state found');
+      resetGameState();
       initializeGame();
     }
 
-    // تشغيل موسيقى الخلفية عند تحميل صفحة الأسئلة
+    // Initialize sounds
     if (window.gameSounds) {
       window.gameSounds.startBGM();
     }
@@ -38,7 +140,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listeners
     const endGameBtn = document.getElementById('endGameBtn');
     if (endGameBtn) {
-      endGameBtn.addEventListener('click', showEndGamePopup);
+      eventListeners.click = () => showEndGamePopup();
+      endGameBtn.addEventListener('click', eventListeners.click);
     }
 
     // Update difficulty display
@@ -53,8 +156,7 @@ document.addEventListener('DOMContentLoaded', () => {
       initializeSettings();
     }
   } catch (error) {
-    console.error('Error initializing game:', error);
-    showError('❌ حدث خطأ في تهيئة اللعبة');
+    handleError(error, 'تهيئة اللعبة');
   }
 });
 
@@ -80,6 +182,7 @@ function startNewQuestion() {
     updateCurrentPlayerDisplay();
     
     const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
+    console.log('Current question:', currentQuestion);
     
     // تأكد من صحة بيانات السؤال
     if (!currentQuestion.question || !currentQuestion.options || currentQuestion.options.length === 0) {
@@ -97,27 +200,31 @@ function startNewQuestion() {
     // عرض الخيارات
     const optionsContainer = document.getElementById('optionsContainer');
     if (optionsContainer) {
+      // مسح الخيارات السابقة وإزالة الفئات
       optionsContainer.innerHTML = '';
+      
+      // إضافة خاصية الصعوبة
+      optionsContainer.setAttribute('data-difficulty', gameState.difficulty);
       
       // Get all available options
       const allOptions = [...currentQuestion.options];
+      console.log('All options:', allOptions);
       
       // تأكد من وجود الإجابة الصحيحة في الخيارات
-      if (!allOptions.includes(currentQuestion.correctAnswer)) {
-        allOptions.push(currentQuestion.correctAnswer);
+      if (!allOptions.includes(currentQuestion.correct)) {
+        allOptions.push(currentQuestion.correct);
       }
       
       // Get the number of options based on difficulty
-      const numOptions = Math.min(
-        GAME_CONFIG.difficulty[gameState.difficulty].options,
-        allOptions.length
-      );
+      const numOptions = GAME_CONFIG.difficulty[gameState.difficulty].options;
+      console.log('Number of options needed:', numOptions);
       
       // Shuffle all options
       const shuffledOptions = allOptions.sort(() => Math.random() - 0.5);
+      console.log('Shuffled options:', shuffledOptions);
       
       // Make sure correct answer is included
-      const correctAnswerIndex = shuffledOptions.indexOf(currentQuestion.correctAnswer);
+      const correctAnswerIndex = shuffledOptions.indexOf(currentQuestion.correct);
       if (correctAnswerIndex >= numOptions) {
         // If correct answer would be cut off, swap it with a random position in the kept options
         const swapIndex = Math.floor(Math.random() * numOptions);
@@ -127,15 +234,36 @@ function startNewQuestion() {
       
       // Use only the required number of options
       const optionsToUse = shuffledOptions.slice(0, numOptions);
+      console.log('Options to use:', optionsToUse);
       
       // Create option buttons
-      optionsToUse.forEach((option) => {
+      optionsToUse.forEach(option => {
         const optionButton = document.createElement('button');
         optionButton.className = 'option';
         optionButton.textContent = option;
+        optionButton.style.cssText = `
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 15px;
+          margin: 0;
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 8px;
+          background-color: rgba(0,0,0,0.3);
+          color: #ffeb3b;
+          font-size: clamp(14px, 1.8vw, 16px);
+          cursor: pointer;
+          transition: all 0.3s ease;
+        `;
         optionButton.onclick = () => checkAnswer(option);
         optionsContainer.appendChild(optionButton);
+        console.log('Added option button:', option);
       });
+
+      // Force a reflow to ensure styles are applied
+      optionsContainer.offsetHeight;
+      
+      console.log('Final options container content:', optionsContainer.innerHTML);
     }
 
     // Update category display
@@ -156,7 +284,7 @@ function startNewQuestion() {
 }
 
 function startTimer() {
-  if (gameState.timer) clearInterval(gameState.timer);
+  cleanupResources(); // Clear any existing timer
   
   let timeLeft = gameState.timePerQuestion;
   const timeLeftElement = document.getElementById('timeLeft');
@@ -186,82 +314,122 @@ function startTimer() {
     updateTimer();
     
     if (timeLeft <= 0) {
-      clearInterval(gameState.timer);
-      if (window.gameSounds) {
-        window.gameSounds.stopHeartbeat();
-      }
+      cleanupResources();
       handleTimeout();
     }
   }, 1000);
 }
 
+function updateScores() {
+  try {
+    const playersList = document.getElementById('playersList');
+    if (!playersList) return;
+
+    // مسح القائمة الحالية
+    playersList.innerHTML = '';
+
+    // إضافة اللاعبين مع نقاطهم
+    gameState.players.forEach((player, index) => {
+      const playerItem = document.createElement('div');
+      playerItem.className = `player-item ${index === gameState.currentPlayerIndex ? 'active' : ''}`;
+      
+      const playerIcon = document.createElement('div');
+      playerIcon.className = 'player-icon';
+      playerIcon.textContent = playerIcons[index % playerIcons.length];
+      
+      const playerName = document.createElement('div');
+      playerName.className = 'player-name';
+      playerName.textContent = player;
+      
+      const playerScore = document.createElement('div');
+      playerScore.className = 'player-score';
+      playerScore.textContent = `${gameState.scores[player] || 0} نقطة`;
+      
+      playerItem.appendChild(playerIcon);
+      playerItem.appendChild(playerName);
+      playerItem.appendChild(playerScore);
+      playersList.appendChild(playerItem);
+    });
+  } catch (error) {
+    console.error('Error in updateScores:', error);
+  }
+}
+
 function checkAnswer(selectedAnswer) {
-  if (gameState.isAnswered) return;
-  gameState.isAnswered = true;
-  
-  clearInterval(gameState.timer);
-  if (window.gameSounds) {
-    window.gameSounds.stopHeartbeat();
-  }
-  
-  const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
-  const isCorrect = selectedAnswer === currentQuestion.correctAnswer;
-  
-  const options = document.querySelectorAll('.option');
-  options.forEach(option => {
-    if (option.textContent === currentQuestion.correctAnswer) {
-      option.classList.add('correct');
-    } else if (option.textContent === selectedAnswer && !isCorrect) {
-      option.classList.add('wrong');
-    }
-    option.classList.add('disabled');
-  });
-
-  if (isCorrect) {
-    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-    gameState.scores[currentPlayer] = (gameState.scores[currentPlayer] || 0) + 1;
+  try {
+    if (gameState.isAnswered) return;
     
-    if (window.gameSounds) {
-      window.gameSounds.playCorrect();
+    const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
+    const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+    
+    // إيقاف المؤقت
+    clearInterval(gameState.timer);
+    
+    // تعطيل جميع الخيارات
+    const options = document.querySelectorAll('.option');
+    options.forEach(option => {
+      option.classList.add('disabled');
+      option.disabled = true;
+    });
+    
+    // التحقق من الإجابة
+    if (selectedAnswer === currentQuestion.correct) {
+      // إجابة صحيحة: +5 نقاط للاعب الحالي
+      gameState.scores[currentPlayer] = (gameState.scores[currentPlayer] || 0) + 5;
+      if (window.gameSounds) {
+        window.gameSounds.playCorrect();
+      }
+    } else {
+      // إجابة خاطئة: -2 نقاط للاعب الحالي
+      gameState.scores[currentPlayer] = (gameState.scores[currentPlayer] || 0) - 2;
+      if (window.gameSounds) {
+        window.gameSounds.playWrong();
+      }
     }
-  } else {
-    if (window.gameSounds) {
-      window.gameSounds.playWrong();
+    
+    // تحديث عرض النقاط
+    updateScores();
+    
+    // تعليم الإجابة الصحيحة والخاطئة
+    options.forEach(option => {
+      if (option.textContent === currentQuestion.correct) {
+        option.classList.add('correct');
+      } else if (option.textContent === selectedAnswer) {
+        option.classList.add('wrong');
+      }
+    });
+    
+    // عرض الشرح
+    const explanationElement = document.getElementById('explanation');
+    if (explanationElement) {
+      explanationElement.textContent = currentQuestion.explanation;
+      explanationElement.style.display = 'block';
     }
+    
+    gameState.isAnswered = true;
+    
+    // الانتقال للدور التالي بعد تأخير
+    setTimeout(nextTurn, 3000);
+  } catch (error) {
+    console.error('Error in checkAnswer:', error);
+    showError('❌ حدث خطأ في التحقق من الإجابة');
   }
-
-  updatePlayersDisplay();
-  
-  setTimeout(() => {
-    nextTurn();
-  }, 2000);
 }
 
 function handleTimeout() {
   if (gameState.isAnswered) return;
   gameState.isAnswered = true;
   
-  const currentQuestion = gameState.questions[gameState.currentQuestionIndex];
-  const options = document.querySelectorAll('.option');
+  // خصم نقطة واحدة من اللاعب الحالي
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  gameState.scores[currentPlayer] = (gameState.scores[currentPlayer] || 0) - 1;
   
-  options.forEach(option => {
-    if (option.textContent === currentQuestion.correctAnswer) {
-      option.classList.add('correct');
-    }
-    option.classList.add('disabled');
-  });
-
-  // Play wrong sound
+  // تشغيل صوت الخطأ
   if (window.gameSounds) {
-    window.gameSounds.stopHeartbeat();
     window.gameSounds.playWrong();
   }
-
-  // Update scores
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  gameState.scores[currentPlayer] = (gameState.scores[currentPlayer] || 0) - 5;
-  updatePlayersDisplay();
   
+  // الانتقال إلى السؤال التالي بعد ثانيتين
   setTimeout(() => {
     nextTurn();
   }, 2000);
@@ -356,50 +524,61 @@ function showResults() {
     (gameState.scores[b] || 0) - (gameState.scores[a] || 0)
   );
   
-  const winner = sortedPlayers[0];
-  const winnerScore = gameState.scores[winner] || 0;
-  
   let resultsHTML = `
-    <div class="results-container">
-      <div class="winner-section">
-        <div class="winner-crown">👑</div>
-        <div class="winner-name">${winner}</div>
-        <div class="winner-score">${winnerScore} نقطة</div>
-      </div>
-      <div class="results-list">
+    <div class="results-wrapper">
+      <div class="results-title">🏆 نتائج اللعبة</div>
   `;
 
-  // Add all players to the list
-  sortedPlayers.forEach((player, index) => {
-    const playerIcon = playerIcons[gameState.players.indexOf(player) % playerIcons.length];
-    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}`;
+  // عرض اللاعبين في صفوف من اثنين
+  for (let i = 0; i < sortedPlayers.length; i += 2) {
+    resultsHTML += `<div class="results-row">`;
+    
+    // اللاعب الأول في الصف
+    const player1 = sortedPlayers[i];
+    const player1Icon = playerIcons[gameState.players.indexOf(player1) % playerIcons.length];
+    const player1Medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    
     resultsHTML += `
-      <div class="player-result">
-        <div class="player-rank">${medal}</div>
-        <div class="player-icon">${playerIcon}</div>
-        <div class="player-info">
-          <div class="player-name">${player}</div>
-          <div class="player-score">${gameState.scores[player] || 0} نقطة</div>
+      <div class="result-item">
+        <div class="result-icon">${player1Icon}</div>
+        <div class="result-info">
+          <div class="result-name">${player1Medal} ${player1}</div>
+          <div class="result-score">${gameState.scores[player1] || 0} نقطة</div>
         </div>
       </div>
     `;
-  });
-
-  resultsHTML += `
-      </div>
-    </div>
-  `;
+    
+    // اللاعب الثاني في الصف (إذا وجد)
+    if (i + 1 < sortedPlayers.length) {
+      const player2 = sortedPlayers[i + 1];
+      const player2Icon = playerIcons[gameState.players.indexOf(player2) % playerIcons.length];
+      const player2Medal = i + 1 === 0 ? '🥇' : i + 1 === 1 ? '🥈' : i + 1 === 2 ? '🥉' : '';
+      
+      resultsHTML += `
+        <div class="result-item">
+          <div class="result-icon">${player2Icon}</div>
+          <div class="result-info">
+            <div class="result-name">${player2Medal} ${player2}</div>
+            <div class="result-score">${gameState.scores[player2] || 0} نقطة</div>
+          </div>
+        </div>
+      `;
+    }
+    
+    resultsHTML += `</div>`;
+  }
+  
+  resultsHTML += `</div>`;
   
   Swal.fire({
-    title: '🏆 نتائج اللعبة',
     html: resultsHTML,
     showCancelButton: false,
     confirmButtonText: '🏠 العودة للصفحة الرئيسية',
     allowOutsideClick: false,
+    background: 'transparent',
+    backdrop: 'rgba(0, 0, 0, 0.8)',
     customClass: {
       popup: 'results-popup',
-      title: 'results-title',
-      htmlContainer: 'results-container',
       confirmButton: 'results-button'
     }
   }).then(() => {
@@ -484,52 +663,4 @@ function initializeSettings() {
       closeModal();
     }
   });
-}
-
-function displayResults() {
-  const resultsContainer = document.getElementById('results');
-  resultsContainer.innerHTML = '';
-  
-  // Create a container for the results
-  const resultsWrapper = document.createElement('div');
-  resultsWrapper.className = 'results-wrapper';
-  
-  // Sort players by score in descending order
-  const sortedPlayers = Object.entries(gameState.scores)
-    .sort(([, a], [, b]) => b - a);
-  
-  // Create rows of 4 players each
-  for (let i = 0; i < sortedPlayers.length; i += 4) {
-    const row = document.createElement('div');
-    row.className = 'results-row';
-    
-    // Add up to 4 players in this row
-    for (let j = 0; j < 4 && i + j < sortedPlayers.length; j++) {
-      const [player, score] = sortedPlayers[i + j];
-      const playerDiv = document.createElement('div');
-      playerDiv.className = 'result-item';
-      
-      // Add player icon
-      const icon = document.createElement('div');
-      icon.className = 'player-icon';
-      icon.innerHTML = gameState.playerIcons[player];
-      
-      // Add player name and score
-      const info = document.createElement('div');
-      info.className = 'player-info';
-      info.innerHTML = `
-        <span class="player-name">${player}</span>
-        <span class="player-score">${score} نقطة</span>
-      `;
-      
-      playerDiv.appendChild(icon);
-      playerDiv.appendChild(info);
-      row.appendChild(playerDiv);
-    }
-    
-    resultsWrapper.appendChild(row);
-  }
-  
-  resultsContainer.appendChild(resultsWrapper);
-  resultsContainer.style.display = 'block';
 }

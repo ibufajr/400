@@ -19,8 +19,8 @@ app.get('/api/categories', async (req, res) => {
     
     const items = await fs.readdir(questionsDir, { withFileTypes: true });
     const categories = items
-      .filter(item => item.isFile() && item.name.endsWith('.csv'))
-      .map(item => item.name.replace('.csv', ''));
+      .filter(item => item.isFile() && item.name.endsWith('.json'))
+      .map(item => item.name.replace('.json', ''));
     
     res.json(categories);
   } catch (error) {
@@ -64,30 +64,13 @@ app.post('/api/categories', async (req, res) => {
 app.get('/api/questions/:category', async (req, res) => {
   try {
     const { category } = req.params;
-    const questionsPath = path.join(__dirname, 'data', 'questions', `${category}.csv`);
+    const questionsPath = path.join(__dirname, 'data', 'questions', 'easy', `${category}.json`);
     
-    let content;
-    try {
-      content = await fs.readFile(questionsPath, 'utf8');
-    } catch (err) {
-      if (err.code === 'ENOENT') {
-        return res.json([]); // Return empty array if file doesn't exist
-      }
-      throw err;
+    if (!fs.existsSync(questionsPath)) {
+      return res.status(404).json({ error: 'الفئة غير موجودة' });
     }
 
-    const questions = content.split('\n')
-      .filter(line => line.trim())
-      .map((line, index) => {
-        const [category, question, ...options] = line.split(',');
-        const correctAnswer = options[options.length - 1];
-        return {
-          id: `q${index + 1}`,
-          text: question.trim(),
-          options: options.slice(0, -1).map(opt => opt.trim()),
-          correctAnswer: correctAnswer.trim()
-        };
-      });
+    const questions = JSON.parse(fs.readFileSync(questionsPath, 'utf8'));
 
     res.json(questions);
   } catch (error) {

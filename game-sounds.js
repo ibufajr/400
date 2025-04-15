@@ -5,51 +5,47 @@ class GameSounds {
     this.bgm = null;
     this.isBGMEnabled = true;
     this.isSFXEnabled = true;
-    this.bgmVolume = 0.5;
-    this.sfxVolume = 0.7;
+    this.bgmVolume = 0.3;
+    this.sfxVolume = 0.5;
     this.soundLock = false;
     this.heartbeatSound = null;
     this.heartbeatInterval = null;
     this.audioContextInitialized = false;
     this.initialized = false;
+    this.loadingPromises = [];
     
     // تكوين Howler.js
-    Howler.html5PoolSize = 4; // تقليل حجم المجموعة بشكل كبير
-    Howler.autoUnlock = true; // السماح بفتح الصوت تلقائياً
-    Howler.autoSuspend = false; // منع تعليق السياق تلقائياً
+    Howler.html5PoolSize = 10;
+    Howler.autoUnlock = true;
+    Howler.autoSuspend = false;
+    Howler.usingWebAudio = true;
     
     // إضافة مستمعي الأحداث للتفاعل
     this.initializeAudioContext = this.initializeAudioContext.bind(this);
-    ['click', 'touchstart'].forEach(event => {
+    ['click', 'touchstart', 'keydown'].forEach(event => {
       document.addEventListener(event, this.initializeAudioContext, { once: true });
     });
-
-    const soundConfig = {
-      correct: {
-        success: 'data/sounds/correct/success.mp3'
-      },
-      wrong: {
-        error: 'data/sounds/wrong/error.mp3'
-      },
-      timer: {
-        tick: 'data/sounds/timer/tick.mp3'
-      },
-      timeout: {
-        timeout: 'data/sounds/timeout/timeout.mp3'
-      }
-    };
   }
 
   initializeAudioContext() {
     if (this.audioContextInitialized) return;
     this.audioContextInitialized = true;
     
-    // تهيئة السياق الصوتي
-    if (Howler.ctx && Howler.ctx.state === 'suspended') {
-      Howler.ctx.resume();
+    try {
+      if (Howler.ctx && Howler.ctx.state === 'suspended') {
+        Howler.ctx.resume();
+      }
+      this.initializeSounds();
+    } catch (error) {
+      console.error('Error initializing audio context:', error);
+      this.fallbackToHTML5();
     }
-    
-    // بدء تحميل الأصوات
+  }
+
+  fallbackToHTML5() {
+    console.warn('Falling back to HTML5 Audio');
+    Howler.usingWebAudio = false;
+    Howler.html5PoolSize = 5;
     this.initializeSounds();
   }
 
@@ -58,16 +54,24 @@ class GameSounds {
     this.initialized = true;
 
     try {
-      // تحميل الموسيقى الخلفية أولاً
-      await this.loadBackgroundMusic();
-      
-      // تحميل المؤثرات الصوتية بشكل متسلسل
-      await this.loadSoundEffects();
+      await Promise.all([
+        this.loadBackgroundMusic(),
+        this.loadSoundEffects()
+      ]);
       
       console.log('All sounds initialized successfully');
     } catch (error) {
       console.error('Error initializing sounds:', error);
+      this.handleSoundError();
     }
+  }
+
+  handleSoundError() {
+    // محاولة إعادة التهيئة بعد فترة
+    setTimeout(() => {
+      this.initialized = false;
+      this.initializeSounds();
+    }, 5000);
   }
 
   async loadBackgroundMusic() {
@@ -76,11 +80,12 @@ class GameSounds {
         src: ['data/sounds/background/calm.mp3'],
         loop: true,
         volume: this.bgmVolume,
-        html5: true,
+        html5: false,
         preload: true,
         onload: resolve,
         onloaderror: () => {
           console.warn('Warning: Could not load background music');
+          this.bgm = null;
           resolve();
         }
       });
@@ -90,20 +95,22 @@ class GameSounds {
   async loadSoundEffects() {
     const effectsToLoad = [
       { id: 'correct', src: 'data/sounds/correct/success.mp3' },
-      { id: 'wrong', src: 'data/sounds/error-4-199275.mp3' },
+      { id: 'wrong', src: 'data/sounds/wrong/error.mp3' },
       { id: 'countdown', src: 'data/sounds/timer/tick_tock.mp3' },
       { id: 'win', src: 'data/sounds/error-4-199275.mp3' },
       { id: 'lose', src: 'data/sounds/error-4-199275.mp3' },
       { id: 'click', src: 'data/sounds/click/click.mp3' }
     ];
 
-    // تحميل كل صوت على حدة مع فترة انتظار بين كل تحميل
-    for (const effect of effectsToLoad) {
-      await new Promise(resolve => setTimeout(resolve, 100)); // انتظار 100ms بين كل تحميل
-      await this.loadSingleEffect(effect);
-    }
+    const loadPromises = effectsToLoad.map(effect => 
+      new Promise(resolve => {
+        setTimeout(() => {
+          this.loadSingleEffect(effect).then(resolve);
+        }, 200);
+      })
+    );
 
-    // تحميل صوت نبضات القلب في النهاية
+    await Promise.all(loadPromises);
     await this.loadHeartbeatSound();
   }
 
@@ -112,23 +119,29 @@ class GameSounds {
       this.sounds[effect.id] = new Howl({
         src: [effect.src],
         volume: this.sfxVolume,
-        html5: true,
+        html5: false,
         preload: true,
         onload: resolve,
         onloaderror: () => {
           console.warn(`Warning: Could not load ${effect.id} sound, using fallback`);
-          // محاولة تحميل الصوت الاحتياطي
-          this.sounds[effect.id] = new Howl({
-            src: ['data/sounds/error-4-199275.mp3'],
-            volume: this.sfxVolume,
-            html5: true,
-            preload: true,
-            onload: resolve,
-            onloaderror: () => {
-              console.error(`Critical: Failed to load fallback sound for ${effect.id}`);
-              resolve(); // نستمر حتى لو فشل التحميل
-            }
-          });
+          this.loadFallbackSound(effect.id).then(resolve);
+        }
+      });
+    });
+  }
+
+  async loadFallbackSound(id) {
+    return new Promise((resolve) => {
+      this.sounds[id] = new Howl({
+        src: ['data/sounds/error-4-199275.mp3'],
+        volume: this.sfxVolume,
+        html5: false,
+        preload: true,
+        onload: resolve,
+        onloaderror: () => {
+          console.error(`Critical: Failed to load fallback sound for ${id}`);
+          this.sounds[id] = null;
+          resolve();
         }
       });
     });
@@ -139,7 +152,7 @@ class GameSounds {
       this.heartbeatSound = new Howl({
         src: ['data/sounds/heartbeat/heartbeat.mp3'],
         volume: this.sfxVolume,
-        html5: true,
+        html5: false,
         preload: true,
         onload: resolve,
         onloaderror: () => {
@@ -147,7 +160,7 @@ class GameSounds {
           this.heartbeatSound = new Howl({
             src: ['data/sounds/error-4-199275.mp3'],
             volume: this.sfxVolume,
-            html5: true,
+            html5: false,
             preload: true,
             onload: resolve,
             onloaderror: () => {
@@ -239,9 +252,9 @@ class GameSounds {
   toggleBGM() {
     this.isBGMEnabled = !this.isBGMEnabled;
     if (this.isBGMEnabled) {
-      this.startBGM();
+      this.bgm.play();
     } else {
-      this.stopBGM();
+      this.bgm.pause();
     }
     return this.isBGMEnabled;
   }

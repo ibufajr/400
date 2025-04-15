@@ -1,5 +1,5 @@
 // Player icons for visual representation
-const playerIcons = ['👨‍🚀', '👩‍🎨', '🧙‍♂️', '🦸‍♂️', '🧜‍♀️', '🧝‍♂️', '🧚‍♀️', '🦹‍♂️'];
+const playerIcons = ['👨‍🚀', '👩‍🎨', '🧙‍♂️', '🦸‍♂️', '🧜‍♀️', '🧝‍♂️', '🧛‍♀️', '🦹‍♂️'];
 
 // Initialize game sounds
 let gameSounds = new GameSounds();
@@ -16,6 +16,12 @@ let gameState = {
   difficulty: 'easy',
   answersCount: 3
 };
+
+// إضافة متغير لتتبع الأسئلة المستخدمة
+let usedQuestionIndices = [];
+
+// Initialize player question history
+const playerQuestionHistory = new Map();
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,102 +92,102 @@ function handleTimeSelection(value) {
 }
 
 async function loadQuestions(category, difficulty) {
-  try {
-    let questions = [];
+  let questions = [];
+  const categoryMap = {
+    'إسلامي': 'Islamic',
+    'تاريخ': 'History',
+    'أدب': 'Literature',
+    'جغرافيا': 'Geography',
+    'علوم': 'Science',
+    'رياضة': 'Sports',
+    'تقني': 'Tech',
+    'سينما': 'Cinema',
+    'فنانين': 'Artists',
+    'سياسي': 'Political',
+    'دول': 'Countries',
+    'عام': 'General'
+  };
+  
+  const englishCategory = categoryMap[category] || category;
+  
+  if (category === 'random') {
+    // في حالة اختيار "عشوائي"، نقرأ جميع الملفات في مجلد المستوى
+    const files = [
+      'Islamic.json',
+      'General.json',
+      'Political.json',
+      'Artists.json',
+      'Countries.json',
+      'Cinema.json',
+      'History.json',
+      'Literature.json',
+      'Geography.json',
+      'Science.json',
+      'Sports.json',
+      'Tech.json'
+    ];
     
-    // تحويل اسم الفئة إلى اللغة الإنجليزية
-    const categoryMap = {
-      'إسلامي': 'Islamic',
-      'أدب': 'Literature',
-      'رياضة': 'Sports',
-      'تاريخ': 'History',
-      'جغرافيا': 'Geography',
-      'علوم': 'Science',
-      'تقني': 'Tech',
-      'سينما': 'Cinema',
-      'فنانين': 'Artists',
-      'سياسي': 'Political',
-      'دول': 'Countries',
-      'عام': 'General'
-    };
-    
-    const englishCategory = categoryMap[category] || category;
-    
-    if (category === 'random') {
-      // في حالة اختيار "عشوائي"، نقرأ جميع الملفات في مجلد المستوى
+    for (const file of files) {
       try {
-        const response = await fetch(`data/questions/${difficulty}/`);
-        if (!response.ok) {
-          throw new Error(`فشل في تحميل الأسئلة للمستوى: ${difficulty}`);
-        }
-        
-        // قراءة جميع الملفات في المجلد
-        const files = await response.json();
-        for (const file of files) {
-          if (file.endsWith('.json')) {
-            try {
-              const fileResponse = await fetch(`data/questions/${difficulty}/${file}`);
-              if (fileResponse.ok) {
-                const content = await fileResponse.json();
-                questions = questions.concat(parseQuestions(content));
-              }
-            } catch (error) {
-              console.error(`خطأ في تحميل الملف ${file}:`, error);
-              continue;
-            }
+        const response = await fetch(`data/questions/${difficulty}/${file}`);
+        if (response.ok) {
+          const content = await response.json();
+          if (content && content.questions && Array.isArray(content.questions)) {
+            questions = questions.concat(content.questions);
           }
         }
       } catch (error) {
-        console.error('خطأ في قراءة مجلد الأسئلة:', error);
-        throw error;
+        console.error(`خطأ في تحميل الملف ${file}:`, error);
+        continue;
       }
-    } else {
-      // في حالة اختيار فئة محددة
-      const filePath = `data/questions/${difficulty}/${englishCategory}.json`;
-      try {
-        const response = await fetch(filePath);
-        if (!response.ok) {
-          throw new Error(`لا توجد أسئلة متوفرة للفئة: ${category} في المستوى: ${difficulty}`);
-        }
-        
+    }
+  } else {
+    // في حالة اختيار فئة محددة
+    try {
+      const response = await fetch(`data/questions/${difficulty}/${englishCategory}.json`);
+      if (response.ok) {
         const content = await response.json();
-        questions = parseQuestions(content);
-      } catch (error) {
-        console.error(`خطأ في تحميل الملف ${filePath}:`, error);
-        throw error;
+        if (content && content.questions && Array.isArray(content.questions)) {
+          questions = content.questions;
+        } else {
+          throw new Error(`تنسيق الأسئلة غير صحيح في الملف`);
+        }
+      } else {
+        throw new Error(`لا توجد أسئلة متوفرة للفئة: ${category} في المستوى: ${difficulty}`);
       }
+    } catch (error) {
+      console.error(`خطأ في تحميل الأسئلة:`, error);
+      throw error;
     }
-    
-    // التحقق من وجود أسئلة
-    if (!questions || questions.length === 0) {
-      throw new Error(`لا توجد أسئلة للفئة: ${category}`);
-    }
-    
-    // خلط الأسئلة
-    return questions.sort(() => Math.random() - 0.5);
-  } catch (error) {
-    console.error('خطأ في تحميل الأسئلة:', error);
-    throw error;
   }
+  
+  if (questions.length === 0) {
+    throw new Error('لم يتم العثور على أي أسئلة صالحة');
+  }
+  
+  return questions.map((q, index) => ({
+    ...q,
+    id: `${category}-${difficulty}-${q.question}-${index}`
+  }));
 }
 
-function parseQuestions(data) {
+function parseJSONQuestions(data) {
   if (!data || !data.questions || !Array.isArray(data.questions)) {
-    console.error('تنسيق البيانات غير صحيح:', data);
+    console.error('تنسيق البيانات JSON غير صحيح:', data);
     return [];
   }
 
   return data.questions.map(q => {
     // التحقق من وجود جميع الأجزاء المطلوبة
     if (!q.question || !q.options || !q.correct || !q.explanation) {
-      console.error('بيانات السؤال غير صالحة:', q);
+      console.error('بيانات السؤال JSON غير صالحة:', q);
       return null;
     }
 
     return {
       question: q.question,
       options: q.options,
-      correctAnswer: q.correct,
+      correct: q.correct,
       explanation: q.explanation
     };
   }).filter(q => q !== null);
@@ -258,8 +264,12 @@ async function startGame() {
     // Load questions based on category and difficulty
     const questions = await loadQuestions(category, difficulty);
     
+    if (!questions || questions.length === 0) {
+      throw new Error('لم يتم العثور على أسئلة');
+    }
+
     // Initialize game state
-    gameState = {
+    const newGameState = {
       players: playerNames,
       questions: questions,
       currentQuestionIndex: 0,
@@ -271,8 +281,20 @@ async function startGame() {
       answersCount: GAME_CONFIG.difficulty[difficulty].options
     };
 
+    // Initialize scores for each player
+    playerNames.forEach(player => {
+      newGameState.scores[player] = 0;
+    });
+
     // Save game state
-    localStorage.setItem('gameState', JSON.stringify(gameState));
+    localStorage.setItem('gameState', JSON.stringify(newGameState));
+    console.log('Saved game state:', newGameState); // للتأكد من حفظ البيانات
+
+    // Initialize player question history
+    playerQuestionHistory.clear();
+    playerNames.forEach(player => {
+      playerQuestionHistory.set(player, new Set());
+    });
 
     // Redirect to game page
     window.location.href = 'game.html';
@@ -358,24 +380,51 @@ function updateTimer() {
 }
 
 function handleTimeUp() {
-  // تشغيل صوت انتهاء الوقت
-  playSound('timeout', 'timeout');
-  
-  // إيقاف المؤقت
-  clearInterval(gameState.timerInterval);
-  
-  // تحديث حالة اللعبة
+    // ... existing code ...
+}
+
+function startNewQuestion() {
+  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  const usedQuestions = playerQuestionHistory.get(currentPlayer) || new Set();
+
+  // فلترة الأسئلة غير المستخدمة لهذا اللاعب
+  const availableQuestions = gameState.questions.filter(q => !usedQuestions.has(q.id));
+
+  if (availableQuestions.length === 0) {
+    // إذا لم يتبق أسئلة، نعيد استخدام الأسئلة لهذا اللاعب فقط
+    playerQuestionHistory.set(currentPlayer, new Set());
+    return startNewQuestion();
+  }
+
+  const randomIndex = Math.floor(Math.random() * availableQuestions.length);
+  const question = availableQuestions[randomIndex];
+
+  // إضافة السؤال إلى المستخدمة لهذا اللاعب
+  usedQuestions.add(question.id);
+  playerQuestionHistory.set(currentPlayer, usedQuestions);
+
+  // عرض السؤال
+  const questionElement = document.getElementById('currentQuestion');
+  questionElement.textContent = question.question;
+
+  // عرض الخيارات
+  const answerButtons = document.querySelectorAll('.answer-button');
+  answerButtons.forEach((btn, index) => {
+    btn.textContent = question.options[index];
+    btn.dataset.correct = index === question.correct;
+  });
+
+  // بدء المؤقت
+  startTimer();
+}
+
+function endGame() {
+  // إعادة تعيين الأسئلة المستخدمة عند انتهاء اللعبة
+  usedQuestionIndices = [];
+  // ... باقي الكود ...
+}
+
+function nextPlayer() {
   gameState.currentPlayerIndex = (gameState.currentPlayerIndex + 1) % gameState.players.length;
-  if (gameState.currentPlayerIndex === 0) {
-    gameState.currentQuestionIndex++;
-  }
-  
-  // التحقق من نهاية اللعبة
-  if (gameState.currentQuestionIndex >= gameState.questions.length) {
-    endGame();
-    return;
-  }
-  
-  // الانتقال للسؤال التالي
-  loadNextQuestion();
+  startNewQuestion();
 }
