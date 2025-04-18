@@ -15,9 +15,10 @@
     "howler": "^2.2.3",
     "localforage": "^1.10.0",
     "sweetalert2": "^11.7.32",
-    "tippy.js": "^6.3.7"
+    "tippy.js": "^6.3.7",
+    "vite": "^5.0.0"
   },
   "devDependencies": {
-    "vite": "^6.2.6"
+    "esbuild": "^0.25.2"
   }
 }

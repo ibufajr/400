@@ -14,23 +14,48 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
 </head>
 <body>
+  <!-- إضافة النجوم -->
+  <div class="star small" style="top: 10%; left: 15%;"></div>
+  <div class="star medium" style="top: 20%; left: 30%;"></div>
+  <div class="star large" style="top: 30%; left: 45%;"></div>
+  <div class="star small" style="top: 40%; left: 60%;"></div>
+  <div class="star medium" style="top: 50%; left: 75%;"></div>
+  <div class="star large" style="top: 60%; left: 90%;"></div>
+  <div class="star small" style="top: 70%; left: 25%;"></div>
+  <div class="star medium" style="top: 80%; left: 40%;"></div>
+  <div class="star large" style="top: 90%; left: 55%;"></div>
+  <div class="star small" style="top: 20%; left: 85%;"></div>
+  <div class="star medium" style="top: 30%; left: 10%;"></div>
+  <div class="star large" style="top: 40%; left: 25%;"></div>
+  <div class="star small" style="top: 50%; left: 40%;"></div>
+  <div class="star medium" style="top: 60%; left: 55%;"></div>
+  <div class="star large" style="top: 70%; left: 70%;"></div>
+  <div class="star small" style="top: 80%; left: 85%;"></div>
+  <div class="star medium" style="top: 90%; left: 10%;"></div>
+  <div class="star large" style="top: 10%; left: 25%;"></div>
+  <div class="star small" style="top: 20%; left: 40%;"></div>
+  <div class="star medium" style="top: 30%; left: 55%;"></div>
+
   <div class="container">
     <div class="corner corner-top-left"></div>
     <div class="corner corner-top-right"></div>
     <div class="corner corner-bottom-left"></div>
     <div class="corner corner-bottom-right"></div>
-    <h1>💭 تحدي الذكاء</h1>
+    <h1>🧠 تحدي العقول</h1>
     <div class="subtitle">🎯 اختبر معلوماتك وتحدى أصدقاءك</div>
 
     <div class="card">
-      <label for="playerCount">👥 عدد اللاعبين:</label>
-      <select id="playerCount">
+      <label for="playerCount">👤 عدد اللاعبين:</label>
+      <select id="playerCount" class="settings-select">
         <option value="">اختر عدد اللاعبين</option>
-        <script>
-          for(let i=1; i<=8; i++) {
-            document.write(`<option value="${i}">${'👥'.repeat(Math.ceil(i/2))} ${i} ${i === 1 ? 'لاعب' : 'لاعبين'}</option>`);
-          }
-        </script>
+        <option value="2">👤 👤 2 لاعبين</option>
+        <option value="3">👤 👤 👤 3 لاعبين</option>
+        <option value="4">👤 👤 👤 👤 4 لاعبين</option>
+        <option value="5">👤 👤 👤 👤 👤 5 لاعبين</option>
+        <option value="6">👤 👤 👤 👤 👤 👤 6 لاعبين</option>
+        <option value="7">👤 👤 👤 👤 👤 👤 👤 7 لاعبين</option>
+        <option value="8">👤 👤 👤 👤 👤 👤 👤 👤 8 لاعبين</option>
+        <option value="9">👤 👤 👤 👤 👤 👤 👤 👤 👤 9 لاعبين</option>
       </select>
       <div id="playerNamesContainer" class="player-selection"></div>
     </div>
@@ -61,9 +86,9 @@
             <label for="difficulty">🎯 مستوى الصعوبة:</label>
             <select id="difficulty">
               <option value="">اختر المستوى</option>
-              <option value="easy"><span style="color: #4CAF50">★</span> سهل (2 أجوبة)</option>
-              <option value="medium"><span style="color: #FF9800">★★</span> متوسط (3 أجوبة)</option>
-              <option value="hard"><span style="color: #F44336">★★★</span> صعب (4 أجوبة)</option>
+              <option value="easy">★ سهل (2 أجوبة)</option>
+              <option value="medium">★★ متوسط (3 أجوبة)</option>
+              <option value="hard">★★★ صعب (4 أجوبة)</option>
             </select>
           </div>
         </div>
@@ -97,6 +122,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.3/howler.min.js"></script>
   <script src="game-config.js"></script>
   <script src="game-sounds.js"></script>
+  <script src="dropdown-styles.js"></script>
   <script src="script.js"></script>
 </body>
 </html>

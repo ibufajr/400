@@ -96,20 +96,12 @@ class GameSounds {
     const effectsToLoad = [
       { id: 'correct', src: 'data/sounds/correct/success.mp3' },
       { id: 'wrong', src: 'data/sounds/wrong/error.mp3' },
-      { id: 'countdown', src: 'data/sounds/timer/tick_tock.mp3' },
+      { id: 'timeout', src: 'data/sounds/timeout/timeout.mp3' },
       { id: 'win', src: 'data/sounds/error-4-199275.mp3' },
-      { id: 'lose', src: 'data/sounds/error-4-199275.mp3' },
-      { id: 'click', src: 'data/sounds/click/click.mp3' }
+      { id: 'countdown', src: 'data/sounds/timer/tick_tock.mp3' }
     ];
 
-    const loadPromises = effectsToLoad.map(effect => 
-      new Promise(resolve => {
-        setTimeout(() => {
-          this.loadSingleEffect(effect).then(resolve);
-        }, 200);
-      })
-    );
-
+    const loadPromises = effectsToLoad.map(effect => this.loadSingleEffect(effect));
     await Promise.all(loadPromises);
     await this.loadHeartbeatSound();
   }
@@ -123,7 +115,7 @@ class GameSounds {
         preload: true,
         onload: resolve,
         onloaderror: () => {
-          console.warn(`Warning: Could not load ${effect.id} sound, using fallback`);
+          console.warn(`Warning: Could not load sound effect: ${effect.id}`);
           this.loadFallbackSound(effect.id).then(resolve);
         }
       });
@@ -175,8 +167,12 @@ class GameSounds {
   }
 
   resumeAudio() {
-    if (this.bgm && this.isBGMEnabled) {
-      this.bgm.play();
+    if (Howler.ctx && Howler.ctx.state === 'suspended') {
+      Howler.ctx.resume().then(() => {
+        if (this.bgm && this.isBGMEnabled) {
+          this.bgm.play();
+        }
+      });
     }
   }
 
@@ -230,7 +226,12 @@ class GameSounds {
     if (this.bgm && this.isBGMEnabled) {
       // Check if AudioContext is in suspended state
       if (Howler.ctx && Howler.ctx.state === 'suspended') {
-        console.log('AudioContext is suspended, waiting for user interaction');
+        console.log('AudioContext is suspended, attempting to resume...');
+        Howler.ctx.resume().then(() => {
+          this.bgm.play();
+        }).catch(error => {
+          console.error('Error resuming AudioContext:', error);
+        });
         return;
       }
       
@@ -241,22 +242,29 @@ class GameSounds {
         }
       } catch (error) {
         console.error('Error playing background music:', error);
+        // Try to recover by reinitializing the sound
+        this.loadBackgroundMusic().then(() => {
+          if (this.bgm) {
+            this.bgm.play();
+          }
+        });
       }
     }
   }
 
   stopBGM() {
-    this.bgm.stop();
+    if (this.bgm) {
+      this.bgm.pause();
+    }
   }
 
   toggleBGM() {
     this.isBGMEnabled = !this.isBGMEnabled;
     if (this.isBGMEnabled) {
-      this.bgm.play();
+      this.startBGM();
     } else {
-      this.bgm.pause();
+      this.stopBGM();
     }
-    return this.isBGMEnabled;
   }
 
   toggleSFX() {
@@ -274,9 +282,21 @@ class GameSounds {
 
   setSFXVolume(volume) {
     this.sfxVolume = Math.round((volume / 100) * 100) / 100;
+    
+    // Update volume for all existing sound effects
     Object.values(this.sounds).forEach(sound => {
-      sound.volume(this.sfxVolume);
+      if (sound) sound.volume(this.sfxVolume);
     });
+    
+    // Update volume for heartbeat sound if it exists
+    if (this.heartbeatSound) {
+      this.heartbeatSound.volume(this.sfxVolume);
+    }
+    
+    // Update volume for background music if it exists
+    if (this.bgm) {
+      this.bgm.volume(this.bgmVolume);
+    }
   }
 
   startHeartbeat() {
@@ -301,6 +321,11 @@ class GameSounds {
       this.heartbeatSound.pause();
       this.heartbeatSound.currentTime = 0;
     }
+  }
+
+  async playTimeout() {
+    if (!this.isSFXEnabled) return;
+    await this.playSound('timeout');
   }
 }
 

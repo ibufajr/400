@@ -16,8 +16,20 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.7.32/dist/sweetalert2.min.css">
 </head>
 <body>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
+  <div class="star"></div>
   <div class="game-container">
-    <h1>🎯 تحدي الذكاء</h1>
+    <div class="corner corner-top-left"></div>
+    <div class="corner corner-top-right"></div>
+    <div class="corner corner-bottom-left"></div>
+    <div class="corner corner-bottom-right"></div>
+    <h1>تحدي العقول</h1>
     
     <div class="header">
       <div class="timer">⏱️ <span id="timeLeft">30</span></div>
@@ -40,7 +52,7 @@
       </div>
     </div>
 
-    <div class="players-list" id="playersList">
+    <div class="players-list" id="playersList" data-players="2">
       <!-- Players will be added dynamically -->
     </div>
 

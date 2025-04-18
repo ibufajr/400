@@ -17,11 +17,7 @@ let gameState = {
   answersCount: 3
 };
 
-// إضافة متغير لتتبع الأسئلة المستخدمة
-let usedQuestionIndices = [];
-
-// Initialize player question history
-const playerQuestionHistory = new Map();
+const usedQuestions = new Set(); // مجموعة لتتبع الأسئلة المستخدمة
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
@@ -53,8 +49,14 @@ document.addEventListener('DOMContentLoaded', () => {
 function generatePlayerInputs(count) {
   const container = document.getElementById('playerNamesContainer');
   if (!container) return;
-
+  
   container.innerHTML = '';
+  
+  // تحديث خاصية data-players في قائمة اللاعبين
+  const playersList = document.getElementById('playersList');
+  if (playersList) {
+    playersList.setAttribute('data-players', count);
+  }
   
   for (let i = 1; i <= count; i++) {
     const playerDiv = document.createElement('div');
@@ -91,6 +93,14 @@ function handleTimeSelection(value) {
   }
 }
 
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 async function loadQuestions(category, difficulty) {
   let questions = [];
   const categoryMap = {
@@ -111,7 +121,6 @@ async function loadQuestions(category, difficulty) {
   const englishCategory = categoryMap[category] || category;
   
   if (category === 'random') {
-    // في حالة اختيار "عشوائي"، نقرأ جميع الملفات في مجلد المستوى
     const files = [
       'Islamic.json',
       'General.json',
@@ -133,7 +142,10 @@ async function loadQuestions(category, difficulty) {
         if (response.ok) {
           const content = await response.json();
           if (content && content.questions && Array.isArray(content.questions)) {
-            questions = questions.concat(content.questions);
+            questions = questions.concat(content.questions.map((q, index) => ({
+              ...q,
+              id: `${category}-${difficulty}-${q.question}-${index}`
+            })));
           }
         }
       } catch (error) {
@@ -142,13 +154,15 @@ async function loadQuestions(category, difficulty) {
       }
     }
   } else {
-    // في حالة اختيار فئة محددة
     try {
       const response = await fetch(`data/questions/${difficulty}/${englishCategory}.json`);
       if (response.ok) {
         const content = await response.json();
         if (content && content.questions && Array.isArray(content.questions)) {
-          questions = content.questions;
+          questions = content.questions.map((q, index) => ({
+            ...q,
+            id: `${englishCategory}-${difficulty}-${q.question}-${index}`
+          }));
         } else {
           throw new Error(`تنسيق الأسئلة غير صحيح في الملف`);
         }
@@ -165,10 +179,8 @@ async function loadQuestions(category, difficulty) {
     throw new Error('لم يتم العثور على أي أسئلة صالحة');
   }
   
-  return questions.map((q, index) => ({
-    ...q,
-    id: `${category}-${difficulty}-${q.question}-${index}`
-  }));
+  // خلط الأسئلة
+  return shuffleArray(questions);
 }
 
 function parseJSONQuestions(data) {
@@ -194,24 +206,23 @@ function parseJSONQuestions(data) {
 }
 
 async function startGame() {
-  // تشغيل موسيقى الخلفية عند بدء اللعبة
-  if (window.gameSounds) {
-    window.gameSounds.startBGM();
-  }
-
-  // Get player information
-  const playerCount = document.getElementById('playerCount')?.value;
-  if (!playerCount) {
+  const playerCount = parseInt(document.getElementById('playerCount').value);
+  if (!playerCount || playerCount < 2 || playerCount > 9) {
     Swal.fire({
       title: 'خطأ',
-      text: 'الرجاء اختيار عدد اللاعبين',
+      text: 'الرجاء اختيار عدد صحيح من اللاعبين (من 2 إلى 9)',
       icon: 'error',
       confirmButtonText: 'حسناً'
     });
     return;
   }
 
-  // Get player names
+  // تشغيل موسيقى الخلفية عند بدء اللعبة
+  if (window.gameSounds) {
+    window.gameSounds.startBGM();
+  }
+
+  // Get player information
   const playerNames = [];
   for (let i = 1; i <= playerCount; i++) {
     const playerInput = document.getElementById(`player${i}`);
@@ -290,12 +301,6 @@ async function startGame() {
     localStorage.setItem('gameState', JSON.stringify(newGameState));
     console.log('Saved game state:', newGameState); // للتأكد من حفظ البيانات
 
-    // Initialize player question history
-    playerQuestionHistory.clear();
-    playerNames.forEach(player => {
-      playerQuestionHistory.set(player, new Set());
-    });
-
     // Redirect to game page
     window.location.href = 'game.html';
   } catch (error) {
@@ -363,6 +368,11 @@ function handleAnswer(isCorrect) {
     } else {
         playSound('wrong', 'error');
     }
+
+    // الانتقال إلى اللاعب التالي بعد فترة قصيرة
+    setTimeout(() => {
+        nextPlayer();
+    }, 2000); // تأخير 2 ثانية قبل الانتقال إلى اللاعب التالي
 }
 
 function startTimer() {
@@ -385,23 +395,22 @@ function handleTimeUp() {
 
 function startNewQuestion() {
   const currentPlayer = gameState.players[gameState.currentPlayerIndex];
-  const usedQuestions = playerQuestionHistory.get(currentPlayer) || new Set();
 
-  // فلترة الأسئلة غير المستخدمة لهذا اللاعب
-  const availableQuestions = gameState.questions.filter(q => !usedQuestions.has(q.id));
+  // الحصول على السؤال الحالي
+  const question = gameState.questions[gameState.currentQuestionIndex];
 
-  if (availableQuestions.length === 0) {
-    // إذا لم يتبق أسئلة، نعيد استخدام الأسئلة لهذا اللاعب فقط
-    playerQuestionHistory.set(currentPlayer, new Set());
-    return startNewQuestion();
+  // إذا كان السؤال قد تم طرحه بالفعل، نبحث عن سؤال جديد
+  while (usedQuestions.has(question.id)) {
+    gameState.currentQuestionIndex++;
+    if (gameState.currentQuestionIndex >= gameState.questions.length) {
+      // إذا كانت جميع الأسئلة قد تم عرضها، يمكنك إعادة تعيين الفهرس أو إنهاء اللعبة
+      gameState.currentQuestionIndex = 0; // أو يمكنك إنهاء اللعبة هنا
+      break;
+    }
   }
 
-  const randomIndex = Math.floor(Math.random() * availableQuestions.length);
-  const question = availableQuestions[randomIndex];
-
-  // إضافة السؤال إلى المستخدمة لهذا اللاعب
+  // إضافة السؤال إلى مجموعة الأسئلة المستخدمة
   usedQuestions.add(question.id);
-  playerQuestionHistory.set(currentPlayer, usedQuestions);
 
   // عرض السؤال
   const questionElement = document.getElementById('currentQuestion');
@@ -416,12 +425,6 @@ function startNewQuestion() {
 
   // بدء المؤقت
   startTimer();
-}
-
-function endGame() {
-  // إعادة تعيين الأسئلة المستخدمة عند انتهاء اللعبة
-  usedQuestionIndices = [];
-  // ... باقي الكود ...
 }
 
 function nextPlayer() {
